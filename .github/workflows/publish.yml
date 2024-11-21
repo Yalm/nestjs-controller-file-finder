@@ -19,7 +19,7 @@ jobs:
       - name: Run build
         run: |
           mkdir -p build
-          go build ./src -ldflags="-w -s" -o ./build
+          go build ./src -o ./build
         env:
           CGO_ENABLED: 0
           GOOS: linux
