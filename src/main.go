@@ -25,10 +25,9 @@ type Route struct {
 }
 
 func main() {
-	rootDir := "../../../NodeJs/PIA/icb-pia-user-ms/src"
+	config := config.GetAppConfig()
 
 	ctx := context.TODO()
-	config := config.GetAppConfig()
 
 	ignoreDirs := map[string]bool{
 		"node_modules": true,
@@ -41,7 +40,7 @@ func main() {
 
 	var extractedRoutes []Route
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(config.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

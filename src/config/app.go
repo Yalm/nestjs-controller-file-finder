@@ -14,10 +14,12 @@ type AppConfig struct {
 	AccessControlAllowMethods string
 	AccessControlAllowHeaders string
 	StageName                 string
+	RootDir                   string
 }
 
 func GetAppConfig() *AppConfig {
 	return &AppConfig{
+		RootDir:                   utils.Getenv("ROOT_DIR", "./src"),
 		EnableCors:                utils.GetBoolenv("ENABLE_CORS", "true"),
 		BackendUrl:                os.Getenv("BACKEND_URL"),
 		RestApiId:                 os.Getenv("REST_API_ID"),
