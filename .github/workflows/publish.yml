@@ -26,10 +26,10 @@ jobs:
           GOARCH: amd64
           GOFLAGS: -buildvcs=false
       - name: Build Docker Image
-        run: docker build . --tag nestjs-nestjs-controller-file-finder:latest
+        run: docker build . --tag nestjs-controller-file-finder:latest
       - name: Publish to Registry
         uses: elgohr/Publish-Docker-Github-Action@v4
         with:
-          name: yalm/nestjs-nestjs-controller-file-finder
+          name: yalm/nestjs-controller-file-finder
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
