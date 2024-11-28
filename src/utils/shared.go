@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 )
 
@@ -30,4 +31,41 @@ func GetBoolenv(key, fallback string) bool {
 		log.Fatalf("Failed to convert %s to boolean: %s", key, err)
 	}
 	return convertedValue
+}
+
+func ExtracParamNames(route string) []string {
+	paramNames := make([]string, 0)
+
+	routePattern := regexp.MustCompile(`\{(\w+)\}`)
+
+	matches := routePattern.FindAllStringSubmatch(route, -1)
+	if matches == nil {
+		return paramNames
+	}
+
+	for _, match := range matches {
+		paramNames = append(paramNames, match[1])
+	}
+
+	return paramNames
+}
+
+func ConvertParamNamesToMapping(paramNames []string) map[string]string {
+	paramMapping := make(map[string]string)
+
+	for _, paramName := range paramNames {
+		paramMapping["integration.request.path."+paramName] = "method.request.path." + paramName
+	}
+
+	return paramMapping
+}
+
+func ConvertParamNamesToMappingWithPrefix(paramNames []string, prefix string) map[string]bool {
+	paramMapping := make(map[string]bool)
+
+	for _, paramName := range paramNames {
+		paramMapping[prefix+paramName] = true
+	}
+
+	return paramMapping
 }

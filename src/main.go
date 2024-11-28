@@ -27,6 +27,14 @@ type Route struct {
 func main() {
 	config := config.GetAppConfig()
 
+	if config.RestApiId == "" {
+		log.Fatalf("RestApiId is required")
+	}
+
+	if config.BackendUrl == "" {
+		log.Fatalf("BackendUrl is required")
+	}
+
 	ctx := context.TODO()
 
 	ignoreDirs := map[string]bool{
@@ -39,6 +47,8 @@ func main() {
 	methodRegex := regexp.MustCompile(`@(Get|Post|Put|Delete|Patch)\(['"]?([^'"]*)['"]?\)`)
 
 	var extractedRoutes []Route
+
+	log.Println("Searching for routes in", config.RootDir)
 
 	err := filepath.Walk(config.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -57,8 +67,7 @@ func main() {
 	})
 
 	if err != nil {
-		log.Println("Error traversing directories:", err)
-		return
+		log.Fatal("Error traversing directories:", err)
 	}
 
 	log.Println("Total routes:", len(extractedRoutes))
@@ -71,8 +80,7 @@ func main() {
 	})
 
 	if err != nil {
-		log.Println("Error getting resources:", err)
-		return
+		log.Fatal("Error getting resources:", err)
 	}
 
 	for _, route := range extractedRoutes {
@@ -86,29 +94,29 @@ func main() {
 	})
 
 	if err != nil {
-		log.Println("Error creating deployment:", err)
+		log.Fatal("Error creating deployment:", err)
 	}
 }
 
-func findResource(resources *[]types.Resource, path string) types.Resource {
+func findResource(resources *[]types.Resource, path string) *types.Resource {
 	for _, resource := range *resources {
 		if resource.PathPart == nil && path != "" {
 			continue
 		}
 
 		if resource.PathPart == nil && path == "" {
-			return resource
+			return &resource
 		}
 
 		if *resource.PathPart == path {
-			return resource
+			return &resource
 		}
 	}
-	return types.Resource{}
+	return &types.Resource{}
 }
 
 func createCORSMethod(ctx context.Context, clientApiGateway *apigateway.Client, config *config.AppConfig, resourceId *string) {
-	log.Println("Creating OPTIONS method for", resourceId)
+	log.Println("Creating OPTIONS method for", *resourceId)
 	_, err := clientApiGateway.PutMethod(ctx, &apigateway.PutMethodInput{
 		RestApiId:         &config.RestApiId,
 		ResourceId:        resourceId,
@@ -168,6 +176,19 @@ func createCORSMethod(ctx context.Context, clientApiGateway *apigateway.Client, 
 	}
 }
 
+func addMethodToResourceById(resources []types.Resource, resourceId string, method string) {
+	for index, resource := range resources {
+		if *resource.Id == resourceId {
+			if resources[index].ResourceMethods == nil {
+				resources[index].ResourceMethods = make(map[string]types.Method)
+			}
+			resources[index].ResourceMethods[method] = types.Method{
+				HttpMethod: aws.String(method),
+			}
+		}
+	}
+}
+
 func createResources(
 	ctx context.Context,
 	clientApiGateway *apigateway.Client,
@@ -203,24 +224,32 @@ func createResources(
 			ResourceMethods: createResourceOutput.ResourceMethods,
 		}
 		*resources = append(*resources, newResource)
-		lastResource = newResource
+		lastResource = &newResource
 	}
+
 	if _, exists := lastResource.ResourceMethods[route.Method]; !exists {
 		log.Println("Creating method for", route.Path)
+		requestParameters := utils.ExtracParamNames(route.Path)
 		_, err := clientApiGateway.PutMethod(ctx, &apigateway.PutMethodInput{
 			ApiKeyRequired:    true,
 			RestApiId:         &config.RestApiId,
 			ResourceId:        lastResource.Id,
 			HttpMethod:        &route.Method,
 			AuthorizationType: aws.String("NONE"),
+			RequestParameters: utils.ConvertParamNamesToMappingWithPrefix(requestParameters, "method.request.path."),
 		})
 		if err != nil {
 			log.Println("Error creating method:", err)
 			return
 		}
+
+		addMethodToResourceById(*resources, *lastResource.Id, route.Method)
+
 		var sb strings.Builder
 		sb.WriteString(config.BackendUrl)
 		sb.WriteString(route.Path)
+
+		log.Println("Creating integration for", route.Path)
 
 		_, err = clientApiGateway.PutIntegration(ctx, &apigateway.PutIntegrationInput{
 			HttpMethod:            &route.Method,
@@ -229,6 +258,7 @@ func createResources(
 			Type:                  types.IntegrationTypeHttpProxy,
 			Uri:                   aws.String(sb.String()),
 			IntegrationHttpMethod: &route.Method,
+			RequestParameters:     utils.ConvertParamNamesToMapping(requestParameters),
 		})
 		if err != nil {
 			log.Println("Error creating integration:", err)
@@ -238,6 +268,7 @@ func createResources(
 
 	if _, exists := lastResource.ResourceMethods["OPTIONS"]; !exists && config.EnableCors {
 		createCORSMethod(ctx, clientApiGateway, config, lastResource.Id)
+		addMethodToResourceById(*resources, *lastResource.Id, "OPTIONS")
 	}
 }
 
