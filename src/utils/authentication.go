@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
-func defaultAuth() *apigateway.Options {
-	return &apigateway.Options{
+func defaultAuth() apigateway.Options {
+	return apigateway.Options{
 		Credentials: credentials.NewStaticCredentialsProvider(
 			os.Getenv("AWS_ACCESS_KEY_ID"),
 			os.Getenv("AWS_SECRET_ACCESS_KEY"),
@@ -23,7 +23,7 @@ func defaultAuth() *apigateway.Options {
 	}
 }
 
-func NewSession(ctx context.Context) *apigateway.Options {
+func NewSession(ctx context.Context) apigateway.Options {
 	roleArn := os.Getenv("AWS_OIDC_ROLE_ARN")
 	webIdentityTokenFile := os.Getenv("BITBUCKET_STEP_OIDC_TOKEN")
 	if webIdentityTokenFile == "" && roleArn == "" {
@@ -47,7 +47,7 @@ func NewSession(ctx context.Context) *apigateway.Options {
 		log.Fatalf("Error assuming role: %v", err)
 	}
 
-	return &apigateway.Options{
+	return apigateway.Options{
 		Credentials: credentials.NewStaticCredentialsProvider(
 			*output.Credentials.AccessKeyId,
 			*output.Credentials.SecretAccessKey,
