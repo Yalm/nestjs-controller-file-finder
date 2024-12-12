@@ -202,7 +202,7 @@ func createResources(
 
 		log.Println("Creating integration for", route.Path)
 
-		_, err = clientApiGateway.PutIntegration(ctx, &apigateway.PutIntegrationInput{
+		putIntegrationInput := &apigateway.PutIntegrationInput{
 			HttpMethod:            &route.Method,
 			ResourceId:            lastResource.Id,
 			RestApiId:             &config.RestApiId,
@@ -210,7 +210,14 @@ func createResources(
 			Uri:                   aws.String(route.GetUri(config.BackendUrl)),
 			IntegrationHttpMethod: &route.Method,
 			RequestParameters:     utils.ConvertParamNamesToMapping(route.Params),
-		})
+		}
+
+		if config.VpcLinkId != "" {
+			putIntegrationInput.ConnectionType = types.ConnectionTypeVpcLink
+			putIntegrationInput.ConnectionId = &config.VpcLinkId
+		}
+
+		_, err = clientApiGateway.PutIntegration(ctx, putIntegrationInput)
 		if err != nil {
 			log.Println("Error creating integration:", err)
 			return

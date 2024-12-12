@@ -10,6 +10,7 @@ import (
 
 type AppConfig struct {
 	EnableCors                bool
+	VpcLinkId                 string
 	BackendUrl                string
 	RestApiId                 string
 	AccessControlAllowOrigin  string
@@ -34,6 +35,7 @@ func GetAppConfig() (*AppConfig, error) {
 		RootDir:                   utils.Getenv("ROOT_DIR", "./src"),
 		EnableCors:                utils.GetBoolenv("ENABLE_CORS", "true"),
 		BackendUrl:                os.Getenv("BACKEND_URL"),
+		VpcLinkId:                 os.Getenv("VPC_LINK_ID"),
 		RestApiId:                 os.Getenv("REST_API_ID"),
 		StageName:                 utils.Getenv("STAGE_NAME", "V1"),
 		AccessControlAllowOrigin:  utils.Getenv("ACCESS_CONTROL_ALLOW_ORIGIN", "*"),
