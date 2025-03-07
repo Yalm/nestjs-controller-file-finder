@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact-path: ${{ steps.build.outputs.artifact-path }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
@@ -19,6 +21,7 @@ jobs:
           go-version: "1.23"
           cache: true
       - name: Run build
+        id: build
         run: |
           mkdir -p build
           go build -ldflags="-w -s" -o ./build/pipe ./src
@@ -27,7 +30,44 @@ jobs:
           GOOS: linux
           GOARCH: amd64
           GOFLAGS: -buildvcs=false
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: built-files
+          path: ./build/
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: built-files
+          path: ./build/
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: ./build/**
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: built-files
+          path: ./build/
+      - name: Get tag version
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Build Docker Image
+        run: docker build . --tag nestjs-nestjs-controller-file-finder:${TAG_NAME}
+      - name: Publish to Registry
+        uses: elgohr/Publish-Docker-Github-Action@v4
+        with:
+          name: yalm/nestjs-nestjs-controller-file-finder
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
