@@ -31,7 +31,7 @@ jobs:
           GOARCH: amd64
           GOFLAGS: -buildvcs=false
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: built-files
           path: ./build/
