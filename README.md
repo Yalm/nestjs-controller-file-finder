@@ -52,7 +52,7 @@ Authenticate with default options:
 ```yaml
 - step:
     script:
-      - curl -L -o pipe https://github.com/Yalm/nestjs-controller-file-finder/releases/download/v0.0.1/pipe
+      - curl -L -o pipe https://github.com/Yalm/nestjs-controller-file-finder/releases/download/0.0.1/pipe
       - chmod +x pipe
       - ./pipe
 ```

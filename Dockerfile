@@ -1,4 +1,3 @@
 FROM alpine:3.21.3
-WORKDIR /
-COPY ./build /bin/updategateway
-ENTRYPOINT ["/bin/updategateway"]
+COPY ./build /bin/updateapigateway
+ENTRYPOINT ["/bin/updateapigateway"]

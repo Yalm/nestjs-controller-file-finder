@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"strings"
 
@@ -30,13 +31,18 @@ func GetAppConfig() (*AppConfig, error) {
 		}
 	}
 
+	restApiId := flag.String("rest-api-id", os.Getenv("REST_API_ID"), "Rest API ID")
+	vpcLinkId := flag.String("vpc-link-id", os.Getenv("VPC_LINK_ID"), "VPC Link ID")
+	backendUrl := flag.String("backend-url", os.Getenv("BACKEND_URL"), "Backend URL")
+	flag.Parse()
+
 	appConfig := &AppConfig{
 		IgnoredPaths:              ignoredPaths,
 		RootDir:                   utils.Getenv("ROOT_DIR", "./src"),
 		EnableCors:                utils.GetBoolenv("ENABLE_CORS", "true"),
-		BackendUrl:                os.Getenv("BACKEND_URL"),
-		VpcLinkId:                 os.Getenv("VPC_LINK_ID"),
-		RestApiId:                 os.Getenv("REST_API_ID"),
+		BackendUrl:                *backendUrl,
+		VpcLinkId:                 *vpcLinkId,
+		RestApiId:                 *restApiId,
 		StageName:                 utils.Getenv("STAGE_NAME", "V1"),
 		AccessControlAllowOrigin:  utils.Getenv("ACCESS_CONTROL_ALLOW_ORIGIN", "*"),
 		AccessControlAllowMethods: utils.Getenv("ACCESS_CONTROL_ALLOW_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"),
