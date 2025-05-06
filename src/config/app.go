@@ -46,7 +46,7 @@ func GetAppConfig() (*AppConfig, error) {
 		StageName:                 utils.Getenv("STAGE_NAME", "V1"),
 		AccessControlAllowOrigin:  utils.Getenv("ACCESS_CONTROL_ALLOW_ORIGIN", "*"),
 		AccessControlAllowMethods: utils.Getenv("ACCESS_CONTROL_ALLOW_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"),
-		AccessControlAllowHeaders: utils.Getenv("ACCESS_CONTROL_ALLOW_HEADERS", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"),
+		AccessControlAllowHeaders: utils.Getenv("ACCESS_CONTROL_ALLOW_HEADERS", "*"),
 	}
 
 	if appConfig.BackendUrl == "" {
