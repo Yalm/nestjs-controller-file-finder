@@ -1,15 +1,6 @@
 name: "NestJS Controller File Finder"
 description: "Find modified NestJS controllers and update API Gateway"
 
-inputs:
-  github-token:
-    description: GitHub Token
-    required: false
-
-outputs:
-  changed-files:
-    description: Changed controller files
-
 runs:
   using: docker
   image: docker://yalm/nestjs-controller-file-finder:0.0.1
