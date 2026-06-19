@@ -12,7 +12,7 @@ outputs:
 
 runs:
   using: docker
-  image: Dockerfile
+  image: docker://yalm/nestjs-controller-file-finder:0.0.1
 
 branding:
   icon: search
