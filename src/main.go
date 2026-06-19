@@ -29,7 +29,7 @@ func main() {
 		log.Fatal("Error finding routes:", err)
 	}
 
-	sess := utils.NewSession(ctx)
+	sess := utils.NewSession(ctx, config.AWSProfile, config.AWSRegion)
 	clientApiGateway := apigateway.New(sess)
 
 	resources, err := clientApiGateway.GetResources(ctx, &apigateway.GetResourcesInput{

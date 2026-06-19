@@ -1,6 +1,12 @@
-name: Build
+name: Build & Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Ingresa la versión (Ej: v1.2.3)"
+        required: true
+        type: string
   push:
     tags:
       - "*.*.*"

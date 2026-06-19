@@ -20,6 +20,8 @@ type AppConfig struct {
 	StageName                 string
 	RootDir                   string
 	IgnoredPaths              map[string]bool
+	AWSProfile                string
+	AWSRegion                 string
 }
 
 func GetAppConfig() (*AppConfig, error) {
@@ -47,6 +49,8 @@ func GetAppConfig() (*AppConfig, error) {
 		AccessControlAllowOrigin:  utils.Getenv("ACCESS_CONTROL_ALLOW_ORIGIN", "*"),
 		AccessControlAllowMethods: utils.Getenv("ACCESS_CONTROL_ALLOW_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"),
 		AccessControlAllowHeaders: utils.Getenv("ACCESS_CONTROL_ALLOW_HEADERS", "*"),
+		AWSProfile:                utils.Getenv("AWS_PROFILE", "default"),
+		AWSRegion:                 utils.Getenv("AWS_REGION", utils.Getenv("AWS_DEFAULT_REGION", "us-east-1")),
 	}
 
 	if appConfig.BackendUrl == "" {

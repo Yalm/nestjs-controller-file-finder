@@ -12,22 +12,41 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
-func defaultAuth() apigateway.Options {
+func defaultAuth(awsProfile, awsRegion string) apigateway.Options {
+	if awsProfile != "" && awsProfile != "default" {
+		cfg, err := config.LoadDefaultConfig(context.TODO(),
+			config.WithSharedConfigProfile(awsProfile),
+			config.WithRegion(awsRegion),
+		)
+		if err != nil {
+			log.Printf("Error loading profile %s, falling back to environment variables: %v", awsProfile, err)
+			return fallbackToEnvAuth(awsRegion)
+		}
+		return apigateway.Options{
+			Credentials: cfg.Credentials,
+			Region:      awsRegion,
+		}
+	}
+
+	return fallbackToEnvAuth(awsRegion)
+}
+
+func fallbackToEnvAuth(awsRegion string) apigateway.Options {
 	return apigateway.Options{
 		Credentials: credentials.NewStaticCredentialsProvider(
 			os.Getenv("AWS_ACCESS_KEY_ID"),
 			os.Getenv("AWS_SECRET_ACCESS_KEY"),
 			"",
 		),
-		Region: os.Getenv("AWS_DEFAULT_REGION"),
+		Region: awsRegion,
 	}
 }
 
-func NewSession(ctx context.Context) apigateway.Options {
+func NewSession(ctx context.Context, awsProfile, awsRegion string) apigateway.Options {
 	roleArn := os.Getenv("AWS_OIDC_ROLE_ARN")
 	webIdentityTokenFile := os.Getenv("BITBUCKET_STEP_OIDC_TOKEN")
 	if webIdentityTokenFile == "" && roleArn == "" {
-		return defaultAuth()
+		return defaultAuth(awsProfile, awsRegion)
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -53,6 +72,6 @@ func NewSession(ctx context.Context) apigateway.Options {
 			*output.Credentials.SecretAccessKey,
 			*output.Credentials.SessionToken,
 		),
-		Region: os.Getenv("AWS_DEFAULT_REGION"),
+		Region: awsRegion,
 	}
 }
