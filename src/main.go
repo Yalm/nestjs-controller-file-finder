@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/Yalm/nestjs-controller-file-finder/src/config"
 	"github.com/Yalm/nestjs-controller-file-finder/src/utils"
@@ -72,7 +75,12 @@ func findResource(resources *[]types.Resource, path string) *types.Resource {
 	return &types.Resource{}
 }
 
-func createCORSMethod(ctx context.Context, clientApiGateway *apigateway.Client, config *config.AppConfig, resourceId *string) {
+func createCORSMethod(
+	ctx context.Context,
+	clientApiGateway *apigateway.Client,
+	config *config.AppConfig,
+	accessControlAllowMethods string,
+	resourceId *string) {
 	log.Println("Creating OPTIONS method for", *resourceId)
 	_, err := clientApiGateway.PutMethod(ctx, &apigateway.PutMethodInput{
 		RestApiId:         &config.RestApiId,
@@ -123,7 +131,7 @@ func createCORSMethod(ctx context.Context, clientApiGateway *apigateway.Client, 
 		StatusCode: aws.String("200"),
 		ResponseParameters: map[string]string{
 			"method.response.header.Access-Control-Allow-Headers": fmt.Sprintf("'%s'", config.AccessControlAllowHeaders),
-			"method.response.header.Access-Control-Allow-Methods": fmt.Sprintf("'%s'", config.AccessControlAllowMethods),
+			"method.response.header.Access-Control-Allow-Methods": fmt.Sprintf("'%s'", accessControlAllowMethods),
 			"method.response.header.Access-Control-Allow-Origin":  fmt.Sprintf("'%s'", config.AccessControlAllowOrigin),
 		},
 	})
@@ -144,6 +152,18 @@ func addMethodToResourceById(resources []types.Resource, resourceId string, meth
 			}
 		}
 	}
+}
+
+func existsMethodInCORSMethod(responseParameters map[string]string, resourceMethods map[string]types.Method) bool {
+	accessControlAllowMethods, _ := responseParameters["method.response.header.Access-Control-Allow-Methods"]
+	accessControlAllowMethods = strings.Trim(accessControlAllowMethods, "'")
+	arr := strings.Split(accessControlAllowMethods, ",")
+	for key := range resourceMethods {
+		if !slices.Contains(arr, key) {
+			return false
+		}
+	}
+	return true
 }
 
 func createResources(
@@ -183,7 +203,7 @@ func createResources(
 		lastResource = &newResource
 	}
 
-	if _, exists := lastResource.ResourceMethods[route.Method]; !exists {
+	if _, resourceExists := lastResource.ResourceMethods[route.Method]; !resourceExists {
 		log.Println("Creating method for", route.Path)
 		_, err := clientApiGateway.PutMethod(ctx, &apigateway.PutMethodInput{
 			ApiKeyRequired:    true,
@@ -224,8 +244,45 @@ func createResources(
 		}
 	}
 
-	if _, exists := lastResource.ResourceMethods["OPTIONS"]; !exists && config.EnableCors {
-		createCORSMethod(ctx, clientApiGateway, config, lastResource.Id)
-		addMethodToResourceById(*resources, *lastResource.Id, "OPTIONS")
+	if config.EnableCors {
+		_, optionsExists := lastResource.ResourceMethods["OPTIONS"]
+
+		if optionsExists {
+			integrationResponse, err := clientApiGateway.GetIntegrationResponse(ctx, &apigateway.GetIntegrationResponseInput{
+				HttpMethod: aws.String("OPTIONS"),
+				ResourceId: lastResource.Id,
+				RestApiId:  &config.RestApiId,
+				StatusCode: aws.String("200"),
+			})
+			if err != nil {
+				log.Println("Error getting integration:", err)
+				return
+			}
+
+			if !existsMethodInCORSMethod(integrationResponse.ResponseParameters, lastResource.ResourceMethods) {
+				methods := slices.Collect(maps.Keys(lastResource.ResourceMethods))
+				integrationResponse.ResponseParameters["method.response.header.Access-Control-Allow-Methods"] = fmt.Sprintf("'%s'", strings.Join(methods, ","))
+				_, err = clientApiGateway.PutIntegrationResponse(ctx, &apigateway.PutIntegrationResponseInput{
+					HttpMethod:         aws.String("OPTIONS"),
+					ResourceId:         lastResource.Id,
+					RestApiId:          &config.RestApiId,
+					StatusCode:         aws.String("200"),
+					ResponseParameters: integrationResponse.ResponseParameters,
+				})
+				if err != nil {
+					log.Println("Error updating integration response:", err)
+					return
+				}
+			}
+
+		} else {
+			accessControlAllowMethods := config.AccessControlAllowMethods
+			if accessControlAllowMethods == "" {
+				methods := slices.Collect(maps.Keys(lastResource.ResourceMethods))
+				accessControlAllowMethods = strings.Join(methods, ",")
+			}
+			createCORSMethod(ctx, clientApiGateway, config, accessControlAllowMethods, lastResource.Id)
+			addMethodToResourceById(*resources, *lastResource.Id, "OPTIONS")
+		}
 	}
 }

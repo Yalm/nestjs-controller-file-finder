@@ -47,7 +47,7 @@ func GetAppConfig() (*AppConfig, error) {
 		RestApiId:                 *restApiId,
 		StageName:                 utils.Getenv("STAGE_NAME", "V1"),
 		AccessControlAllowOrigin:  utils.Getenv("ACCESS_CONTROL_ALLOW_ORIGIN", "*"),
-		AccessControlAllowMethods: utils.Getenv("ACCESS_CONTROL_ALLOW_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"),
+		AccessControlAllowMethods: os.Getenv("ACCESS_CONTROL_ALLOW_METHODS"),
 		AccessControlAllowHeaders: utils.Getenv("ACCESS_CONTROL_ALLOW_HEADERS", "*"),
 		AWSProfile:                utils.Getenv("AWS_PROFILE", "default"),
 		AWSRegion:                 utils.Getenv("AWS_REGION", utils.Getenv("AWS_DEFAULT_REGION", "us-east-1")),

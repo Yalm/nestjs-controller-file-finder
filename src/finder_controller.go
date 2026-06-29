@@ -17,7 +17,8 @@ func FindRoutes(rootDir string, ignoredPaths map[string]bool) ([]utils.Route, er
 
 	var extractedRoutes []utils.Route
 
-	controllerRegex := regexp.MustCompile(`@Controller\(['"]?([^'"]*)['"]?\)`)
+	controllerRegex := regexp.MustCompile(`@Controller\(\s*(\[[^\]]*\]|['"][^'"]*['"])?\s*\)`)
+	controllerValueRegex := regexp.MustCompile(`['"]([^'"]*)['"]`)
 	methodRegex := regexp.MustCompile(`@(Get|Post|Put|Delete|Patch)\(['"]?([^'"]*)['"]?\)`)
 	pathRegex := regexp.MustCompile(`:(\w+)`)
 
@@ -27,7 +28,7 @@ func FindRoutes(rootDir string, ignoredPaths map[string]bool) ([]utils.Route, er
 		}
 
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".controller.ts") {
-			extractRoutesFromFile(path, controllerRegex, methodRegex, pathRegex, ignoredPaths, &extractedRoutes)
+			extractRoutesFromFile(path, controllerRegex, controllerValueRegex, methodRegex, pathRegex, ignoredPaths, &extractedRoutes)
 		}
 
 		return nil
@@ -41,7 +42,7 @@ func FindRoutes(rootDir string, ignoredPaths map[string]bool) ([]utils.Route, er
 
 func extractRoutesFromFile(
 	filePath string,
-	controllerRegex, methodRegex, pathRegex *regexp.Regexp,
+	controllerRegex, controllerValueRegex, methodRegex, pathRegex *regexp.Regexp,
 	ignoredPaths map[string]bool,
 	routes *[]utils.Route) {
 	file, err := os.Open(filePath)
@@ -51,28 +52,38 @@ func extractRoutesFromFile(
 	}
 	defer file.Close()
 
-	var baseRoute string
+	paths := make(map[string]bool)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
 		if matches := controllerRegex.FindStringSubmatch(line); len(matches) > 1 {
-			baseRoute = matches[1]
+			if matches[1] == "" {
+				paths[""] = true
+				continue
+			}
+			values := controllerValueRegex.FindAllStringSubmatch(matches[1], -1)
+			for _, v := range values {
+				paths[v[1]] = true
+			}
 		}
 
 		if matches := methodRegex.FindStringSubmatch(line); len(matches) > 2 {
 			methodRoute := matches[2]
-			fullRoute := filepath.Join("/", baseRoute, methodRoute)
-			fullRoute = strings.ReplaceAll(fullRoute, "\\", "/")
+			for baseRoute := range paths {
+				fullRoute := filepath.Join("/", baseRoute, methodRoute)
+				fullRoute = strings.ReplaceAll(fullRoute, "\\", "/")
 
-			if ignoredPaths[fullRoute] {
-				log.Println("Ignoring route", fullRoute)
-				continue
+				if ignoredPaths[fullRoute] {
+					log.Println("Ignoring route", fullRoute)
+					continue
+				}
+
+				fullRoute = pathRegex.ReplaceAllString(fullRoute, `{$1}`)
+				*routes = append(*routes, utils.NewRoute(strings.ToUpper(matches[1]), fullRoute))
 			}
 
-			fullRoute = pathRegex.ReplaceAllString(fullRoute, `{$1}`)
-			*routes = append(*routes, utils.NewRoute(strings.ToUpper(matches[1]), fullRoute))
 		}
 	}
 
