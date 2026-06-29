@@ -3,7 +3,7 @@ description: "Find modified NestJS controllers and update API Gateway"
 
 runs:
   using: docker
-  image: docker://yalm/nestjs-controller-file-finder:0.0.1
+  image: docker://yalm/nestjs-controller-file-finder:0.0.2
 
 branding:
   icon: search
